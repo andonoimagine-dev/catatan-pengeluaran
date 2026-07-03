@@ -870,4 +870,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setDefaultDate();
     initEventListeners();
     refreshViews();
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(e => {
+            console.error('Service worker gagal terdaftar:', e);
+        });
+    }
 });

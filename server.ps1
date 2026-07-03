@@ -24,6 +24,8 @@ while ($server.IsListening) {
         if ($filePath -like "*.html") { $response.ContentType = "text/html" }
         elseif ($filePath -like "*.css") { $response.ContentType = "text/css" }
         elseif ($filePath -like "*.js") { $response.ContentType = "application/javascript" }
+        elseif ($filePath -like "*.json") { $response.ContentType = "application/json" }
+        elseif ($filePath -like "*.svg") { $response.ContentType = "image/svg+xml" }
 
         $response.OutputStream.Write($fileContent, 0, $fileContent.Length)
     } else {

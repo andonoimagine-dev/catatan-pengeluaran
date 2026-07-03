@@ -1,0 +1,24 @@
+{
+    "name": "Catatan Pengeluaran",
+    "short_name": "Pengeluaran",
+    "description": "Catat pengeluaran harian rumah tangga dengan mudah",
+    "start_url": "./",
+    "display": "standalone",
+    "background_color": "#F5F3EF",
+    "theme_color": "#93B89E",
+    "lang": "id",
+    "icons": [
+        {
+            "src": "icons/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "maskable"
+        }
+    ]
+}
