@@ -4,93 +4,50 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**catatan-pengeluaran** is a web application for tracking daily expenses. The project is in early-stage development.
+**catatan-pengeluaran** is a household expense tracker web app (UI text in Indonesian). It is a fully client-side PWA built with **vanilla HTML/CSS/JavaScript — no framework, no build step, no dependencies, no backend**. All data lives in the browser's localStorage.
 
-## Technology Stack (Recommended)
+## Running & Verifying
 
-This project should use a modern web stack suitable for a personal finance app:
+There is no `npm`, no test suite, and no linter. To run the app:
 
-- **Frontend Framework**: React or Vue.js for interactive UI
-- **Build Tool**: Vite for fast development and optimized builds
-- **Language**: TypeScript for type safety
-- **Styling**: CSS Modules or Tailwind CSS
-- **State Management**: React Context API or Zustand (if needed)
-- **Database**: SQLite (local), PostgreSQL (if deployed), or IndexedDB (client-side only)
-- **Backend** (optional): Node.js/Express if server-side functionality is needed
-
-## Development Commands
-
-Once the project is set up, these will be the standard commands:
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build locally
-npm run preview
-
-# Run tests (when test suite is added)
-npm run test
-
-# Lint code
-npm run lint
-
-# Format code
-npm run format
+```powershell
+.\server.ps1   # static server on http://localhost:8000
 ```
 
-## Project Structure (Planned)
+A static server is required for the service worker (it won't register via `file://`). Verify changes by driving the app in a browser; note that the delete-expense and category-management flows use native `confirm()`/`prompt()` dialogs, which block browser automation — avoid triggering them in automated checks (newer features deliberately use inline panels instead).
+
+## Architecture
 
 ```
-src/
-├── components/          # Reusable React/Vue components
-├── pages/              # Page-level components (routing)
-├── hooks/              # Custom React hooks (if using React)
-├── utils/              # Utility functions
-├── services/           # API calls and external service integrations
-├── styles/             # Global styles
-├── types/              # TypeScript type definitions
-└── App.tsx/App.vue     # Root component
-
-public/                 # Static assets
-tests/                  # Test files
+index.html      # single page; all sections live here
+js/app.js       # all application logic in one classic script (globals, no modules)
+css/style.css   # all styling; design tokens as CSS variables in :root
+manifest.json   # PWA manifest
+sw.js           # service worker, cache-first with versioned cache name
+icons/icon.svg  # app icon (also favicon)
+server.ps1      # Windows dev server (update its content-type map when adding new file types)
 ```
 
-## Key Development Patterns
+### Data model (localStorage)
 
-### State Management
-- Start simple with React Context API or component state
-- If the app grows, migrate to Zustand or similar lightweight solution
-- For expense data: consider local storage or a database depending on deployment model
+| Key | Content |
+|---|---|
+| `catatan-pengeluaran-data` | array of `{id, date: 'YYYY-MM-DD', category, amount, note}` sorted date-desc |
+| `catatan-pengeluaran-categories` | array of custom category names (defaults live in `DEFAULT_CATEGORIES` in app.js) |
+| `catatan-pengeluaran-budgets` | `{total: number\|null, categories: {[name]: number}}` |
 
-### API Integration
-- If this has a backend: keep API calls in `services/` directory
-- Use environment variables for API endpoints (`.env` files)
-- Handle loading and error states consistently
+### Key patterns in app.js
 
-### Expense Tracking Features
-Core features to implement:
-- Add/edit/delete expenses
-- Categorize expenses
-- Filter by date, category, amount
-- Generate basic statistics (total spending, category breakdown)
-- Export or view reports
+- **Single render pipeline**: mutate state → `save*()` → `refreshViews()` (re-renders month nav, list, summary, category stats, trend, budget list). Never render piecemeal.
+- **`activeMonth`** (`'YYYY-MM'`) drives summary, category stats, and the expense list; the trend chart always shows the last 6 calendar months.
+- All list interactions use **event delegation** with `data-*` attributes on the container.
+- HTML built with template strings; user input goes through `escapeHtml()`.
+- Currency/date formatting via `Intl` with the `id-ID` locale.
 
-## Git Workflow
+## Important Conventions
 
-- **Branch naming**: Use descriptive names (feature/add-categories, fix/date-picker-bug)
-- **Commits**: Keep commits atomic and descriptive
-- **PR reviews**: Required before merging to main
-
-## Important Notes
-
-- This project handles financial data—ensure proper validation and error handling
-- Consider privacy and security if this ever connects to external services
-- Start with localStorage for simplicity; migrate to a database if persistence across devices is needed
-- Keep the UI responsive for mobile use cases
+- **Bump `CACHE_NAME` in `sw.js`** (e.g. `catatan-pengeluaran-v1` → `-v2`) whenever `app.js`, `style.css`, or `index.html` changes — the service worker is cache-first, so users keep the old version otherwise.
+- Commit messages are in Indonesian, imperative mood (see `git log`).
+- UI copy is Indonesian; keep new UI text consistent.
+- New destructive/confirm flows should use inline confirmation panels (like the import Gabungkan/Ganti Semua flow), not `confirm()`/`prompt()`.
+- This app handles household financial data: validate all imported/parsed data defensively (see `validateImportData`) and never let a bad file corrupt stored data.
