@@ -1,4 +1,18 @@
 const STORAGE_KEY = 'catatan-pengeluaran-data';
+const CATEGORY_STORAGE_KEY = 'catatan-pengeluaran-categories';
+const ADD_CATEGORY_VALUE = '__add_new__';
+const DELETE_CATEGORY_VALUE = '__delete_category__';
+
+const DEFAULT_CATEGORIES = [
+    'Makanan & Minuman',
+    'Transportasi',
+    'Belanja',
+    'Tagihan',
+    'Hiburan',
+    'Kesehatan',
+    'Pendidikan',
+    'Lainnya'
+];
 
 const categoryColors = {
     'Makanan & Minuman': 1,
@@ -12,6 +26,7 @@ const categoryColors = {
 };
 
 let expenses = [];
+let customCategories = [];
 
 function loadExpenses() {
     try {
@@ -30,6 +45,79 @@ function saveExpenses() {
         console.error('Error saving expenses:', e);
         alert('Gagal menyimpan data. Storage mungkin penuh.');
     }
+}
+
+function loadCategories() {
+    try {
+        const data = localStorage.getItem(CATEGORY_STORAGE_KEY);
+        customCategories = data ? JSON.parse(data) : [];
+    } catch (e) {
+        console.error('Error loading categories:', e);
+        customCategories = [];
+    }
+}
+
+function saveCategories() {
+    try {
+        localStorage.setItem(CATEGORY_STORAGE_KEY, JSON.stringify(customCategories));
+    } catch (e) {
+        console.error('Error saving categories:', e);
+        alert('Gagal menyimpan kategori. Storage mungkin penuh.');
+    }
+}
+
+function getAllCategories() {
+    return [...DEFAULT_CATEGORIES, ...customCategories];
+}
+
+function getCategoryBadgeNumber(category) {
+    if (categoryColors[category]) {
+        return categoryColors[category];
+    }
+    let hash = 0;
+    for (let i = 0; i < category.length; i++) {
+        hash = (hash * 31 + category.charCodeAt(i)) | 0;
+    }
+    return (Math.abs(hash) % 8) + 1;
+}
+
+function populateCategorySelects(selectedInputValue = '') {
+    const categories = getAllCategories();
+    const inputSelect = document.getElementById('inputCategory');
+    const filterSelect = document.getElementById('filterCategory');
+    const previousFilterValue = filterSelect.value;
+
+    const optionsHtml = categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    const deleteOptionHtml = customCategories.length > 0
+        ? `<option value="${DELETE_CATEGORY_VALUE}">🗑 Hapus kategori...</option>`
+        : '';
+
+    inputSelect.innerHTML = '<option value="">Pilih Kategori</option>' + optionsHtml +
+        `<option value="${ADD_CATEGORY_VALUE}">+ Tambah kategori baru...</option>` + deleteOptionHtml;
+    inputSelect.value = selectedInputValue;
+
+    filterSelect.innerHTML = '<option value="">Semua Kategori</option>' + optionsHtml;
+    if (categories.includes(previousFilterValue)) {
+        filterSelect.value = previousFilterValue;
+    }
+}
+
+function addCustomCategory(name) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+        return null;
+    }
+    if (getAllCategories().includes(trimmed)) {
+        return trimmed;
+    }
+    customCategories.push(trimmed);
+    saveCategories();
+    return trimmed;
+}
+
+function deleteCustomCategory(name) {
+    customCategories = customCategories.filter(c => c !== name);
+    saveCategories();
 }
 
 function formatCurrency(amount) {
@@ -110,7 +198,7 @@ function renderList(filterCategory = '') {
     }
 
     listContainer.innerHTML = filteredExpenses.map(expense => {
-        const badgeClass = `badge-${categoryColors[expense.category] || 8}`;
+        const badgeClass = `badge-${getCategoryBadgeNumber(expense.category)}`;
         const noteHtml = expense.note ? `<p class="expense-note">${escapeHtml(expense.note)}</p>` : '';
 
         return `
@@ -144,6 +232,50 @@ function setDefaultDate() {
 
 function initEventListeners() {
     const form = document.getElementById('expenseForm');
+
+    const inputCategory = document.getElementById('inputCategory');
+    inputCategory.addEventListener('change', (e) => {
+        if (e.target.value === ADD_CATEGORY_VALUE) {
+            const name = prompt('Masukkan nama kategori baru:');
+            if (name === null) {
+                populateCategorySelects('');
+                return;
+            }
+
+            const added = addCustomCategory(name);
+            populateCategorySelects(added || '');
+            return;
+        }
+
+        if (e.target.value === DELETE_CATEGORY_VALUE) {
+            if (customCategories.length === 0) {
+                alert('Belum ada kategori kustom yang bisa dihapus');
+                populateCategorySelects('');
+                return;
+            }
+
+            const list = customCategories.map((c, i) => `${i + 1}. ${c}`).join('\n');
+            const answer = prompt(`Masukkan nomor kategori yang ingin dihapus:\n${list}`);
+            if (answer === null) {
+                populateCategorySelects('');
+                return;
+            }
+
+            const index = parseInt(answer, 10) - 1;
+            if (isNaN(index) || index < 0 || index >= customCategories.length) {
+                alert('Pilihan tidak valid');
+                populateCategorySelects('');
+                return;
+            }
+
+            const target = customCategories[index];
+            if (confirm(`Hapus kategori "${target}"? Pengeluaran yang sudah tercatat dengan kategori ini tidak akan terhapus.`)) {
+                deleteCustomCategory(target);
+            }
+            populateCategorySelects('');
+        }
+    });
+
     form.addEventListener('submit', (e) => {
         e.preventDefault();
 
@@ -152,7 +284,7 @@ function initEventListeners() {
         const amount = document.getElementById('inputAmount').value;
         const note = document.getElementById('inputNote').value;
 
-        if (!date || !category || !amount) {
+        if (!date || !category || category === ADD_CATEGORY_VALUE || category === DELETE_CATEGORY_VALUE || !amount) {
             alert('Harap isi semua field yang diperlukan');
             return;
         }
@@ -188,6 +320,8 @@ function initEventListeners() {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadExpenses();
+    loadCategories();
+    populateCategorySelects();
     setDefaultDate();
     renderList();
     renderSummary();

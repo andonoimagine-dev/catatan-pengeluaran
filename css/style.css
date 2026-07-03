@@ -1,23 +1,23 @@
 :root {
-    --color-primary: #5B6FFF;
-    --color-primary-dark: #4A5AD9;
-    --color-primary-light: #E8EBFF;
-    --color-bg: #FAFBFC;
-    --color-surface: #FFFFFF;
-    --color-text-primary: #1F2937;
-    --color-text-secondary: #6B7280;
-    --color-border: #E5E7EB;
-    --color-danger: #EF4444;
-    --color-danger-light: #FEE2E2;
+    --color-primary: #93B89E;
+    --color-primary-dark: #6FA080;
+    --color-primary-light: #EAF3EC;
+    --color-bg: #F5F3EF;
+    --color-surface: #FDFDFB;
+    --color-text-primary: #3A3F3D;
+    --color-text-secondary: #767C79;
+    --color-border: #E0DED8;
+    --color-danger: #C97F72;
+    --color-danger-light: #F5E7E3;
 
-    --color-category-1: #3B82F6;
-    --color-category-2: #10B981;
-    --color-category-3: #F59E0B;
-    --color-category-4: #EF4444;
-    --color-category-5: #8B5CF6;
-    --color-category-6: #EC4899;
-    --color-category-7: #06B6D4;
-    --color-category-8: #6B7280;
+    --color-category-1: #8AA9C9;
+    --color-category-2: #93B48B;
+    --color-category-3: #D9A96C;
+    --color-category-4: #C97F72;
+    --color-category-5: #A594C0;
+    --color-category-6: #CE94AC;
+    --color-category-7: #7FB8B0;
+    --color-category-8: #A8A29C;
 
     --spacing-xs: 0.25rem;
     --spacing-sm: 0.5rem;
