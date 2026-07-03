@@ -13,13 +13,22 @@
             <p class="subtitle">Catat pengeluaran harian dengan mudah</p>
         </header>
 
+        <section class="month-nav">
+            <button id="prevMonthBtn" class="btn-nav" aria-label="Bulan sebelumnya">&#8249;</button>
+            <div class="month-nav-center">
+                <span id="monthLabel" class="month-label"></span>
+                <button id="currentMonthBtn" class="btn-text hidden">Kembali ke Bulan Ini</button>
+            </div>
+            <button id="nextMonthBtn" class="btn-nav" aria-label="Bulan berikutnya">&#8250;</button>
+        </section>
+
         <section class="summary">
             <div class="summary-card">
                 <div class="summary-label">Total Hari Ini</div>
                 <div class="summary-amount" id="todayTotal">Rp 0</div>
             </div>
             <div class="summary-card accent">
-                <div class="summary-label">Total Bulan Ini</div>
+                <div class="summary-label" id="monthTotalLabel">Total Bulan Ini</div>
                 <div class="summary-amount" id="monthTotal">Rp 0</div>
             </div>
         </section>
@@ -52,10 +61,15 @@
         </section>
 
         <section class="stats-section">
-            <h2>Rincian per Kategori (Bulan Ini)</h2>
+            <h2 id="statsTitle">Rincian per Kategori</h2>
             <div id="categoryStats" class="category-stats">
                 <p class="empty-message">Belum ada pengeluaran bulan ini</p>
             </div>
+        </section>
+
+        <section class="stats-section">
+            <h2>Tren 6 Bulan Terakhir</h2>
+            <div id="trendChart" class="category-stats"></div>
         </section>
 
         <section class="filter-section">

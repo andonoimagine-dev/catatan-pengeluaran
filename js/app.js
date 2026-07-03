@@ -28,6 +28,7 @@ const categoryColors = {
 let expenses = [];
 let customCategories = [];
 let editingId = null;
+let activeMonth = null;
 
 function loadExpenses() {
     try {
@@ -149,10 +150,42 @@ function getYearMonth(dateString) {
     return dateString.substring(0, 7);
 }
 
+function getCurrentMonth() {
+    return getYearMonth(getTodayString());
+}
+
+function shiftMonth(yearMonth, delta) {
+    const [year, month] = yearMonth.split('-').map(Number);
+    const date = new Date(year, month - 1 + delta, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatMonth(yearMonth) {
+    const [year, month] = yearMonth.split('-').map(Number);
+    return new Intl.DateTimeFormat('id-ID', {
+        month: 'long',
+        year: 'numeric'
+    }).format(new Date(year, month - 1, 1));
+}
+
+function setActiveMonth(yearMonth) {
+    activeMonth = yearMonth;
+    refreshViews();
+}
+
 function refreshViews() {
+    renderMonthNav();
     renderList(document.getElementById('filterCategory').value);
     renderSummary();
     renderCategoryStats();
+    renderTrend();
+}
+
+function renderMonthNav() {
+    const isCurrentMonth = activeMonth === getCurrentMonth();
+    document.getElementById('monthLabel').textContent = formatMonth(activeMonth);
+    document.getElementById('nextMonthBtn').disabled = activeMonth >= getCurrentMonth();
+    document.getElementById('currentMonthBtn').classList.toggle('hidden', isCurrentMonth);
 }
 
 function addExpense(date, category, amount, note) {
@@ -166,6 +199,7 @@ function addExpense(date, category, amount, note) {
     expenses.push(expense);
     expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
     saveExpenses();
+    activeMonth = getYearMonth(expense.date);
     refreshViews();
 }
 
@@ -180,6 +214,7 @@ function updateExpense(id, date, category, amount, note) {
     expense.note = note.trim();
     expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
     saveExpenses();
+    activeMonth = getYearMonth(expense.date);
     refreshViews();
 }
 
@@ -214,22 +249,63 @@ function exitEditMode() {
 
 function renderSummary() {
     const today = getTodayString();
-    const currentMonth = getYearMonth(today);
+    const isCurrentMonth = activeMonth === getCurrentMonth();
 
     const todayExpenses = expenses.filter(e => e.date === today);
-    const monthExpenses = expenses.filter(e => getYearMonth(e.date) === currentMonth);
+    const monthExpenses = expenses.filter(e => getYearMonth(e.date) === activeMonth);
 
     const todayTotal = todayExpenses.reduce((sum, e) => sum + e.amount, 0);
     const monthTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
     document.getElementById('todayTotal').textContent = formatCurrency(todayTotal);
     document.getElementById('monthTotal').textContent = formatCurrency(monthTotal);
+    document.getElementById('monthTotalLabel').textContent = isCurrentMonth
+        ? 'Total Bulan Ini'
+        : `Total ${formatMonth(activeMonth)}`;
+}
+
+function renderTrend() {
+    const container = document.getElementById('trendChart');
+    const currentMonth = getCurrentMonth();
+
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+        months.push(shiftMonth(currentMonth, -i));
+    }
+
+    const totals = months.map(month =>
+        expenses
+            .filter(e => getYearMonth(e.date) === month)
+            .reduce((sum, e) => sum + e.amount, 0)
+    );
+    const maxTotal = Math.max(...totals);
+
+    container.innerHTML = months.map((month, i) => {
+        const barWidth = maxTotal > 0 ? (totals[i] / maxTotal) * 100 : 0;
+        const activeClass = month === activeMonth ? ' active' : '';
+
+        return `
+            <div class="stat-row trend-row${activeClass}" data-month="${month}" role="button" tabindex="0">
+                <div class="stat-row-header">
+                    <span class="stat-category">${formatMonth(month)}</span>
+                    <span class="stat-value">${formatCurrency(totals[i])}</span>
+                </div>
+                <div class="stat-bar-track">
+                    <div class="stat-bar-fill" style="width: ${barWidth}%"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderCategoryStats() {
     const container = document.getElementById('categoryStats');
-    const currentMonth = getYearMonth(getTodayString());
-    const monthExpenses = expenses.filter(e => getYearMonth(e.date) === currentMonth);
+    const isCurrentMonth = activeMonth === getCurrentMonth();
+    document.getElementById('statsTitle').textContent = isCurrentMonth
+        ? 'Rincian per Kategori (Bulan Ini)'
+        : `Rincian per Kategori (${formatMonth(activeMonth)})`;
+
+    const monthExpenses = expenses.filter(e => getYearMonth(e.date) === activeMonth);
 
     if (monthExpenses.length === 0) {
         container.innerHTML = '<p class="empty-message">Belum ada pengeluaran bulan ini</p>';
@@ -266,14 +342,14 @@ function renderCategoryStats() {
 
 function renderList(filterCategory = '') {
     const listContainer = document.getElementById('expenseList');
-    let filteredExpenses = expenses;
+    let filteredExpenses = expenses.filter(e => getYearMonth(e.date) === activeMonth);
 
     if (filterCategory) {
-        filteredExpenses = expenses.filter(e => e.category === filterCategory);
+        filteredExpenses = filteredExpenses.filter(e => e.category === filterCategory);
     }
 
     if (filteredExpenses.length === 0) {
-        listContainer.innerHTML = '<p class="empty-message">Belum ada catatan pengeluaran</p>';
+        listContainer.innerHTML = `<p class="empty-message">Belum ada catatan pengeluaran di ${formatMonth(activeMonth)}</p>`;
         return;
     }
 
@@ -393,6 +469,37 @@ function initEventListeners() {
         renderList(e.target.value);
     });
 
+    document.getElementById('prevMonthBtn').addEventListener('click', () => {
+        setActiveMonth(shiftMonth(activeMonth, -1));
+    });
+
+    document.getElementById('nextMonthBtn').addEventListener('click', () => {
+        if (activeMonth < getCurrentMonth()) {
+            setActiveMonth(shiftMonth(activeMonth, 1));
+        }
+    });
+
+    document.getElementById('currentMonthBtn').addEventListener('click', () => {
+        setActiveMonth(getCurrentMonth());
+    });
+
+    const trendChart = document.getElementById('trendChart');
+    trendChart.addEventListener('click', (e) => {
+        const row = e.target.closest('.trend-row');
+        if (row) {
+            setActiveMonth(row.dataset.month);
+        }
+    });
+    trendChart.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            const row = e.target.closest('.trend-row');
+            if (row) {
+                e.preventDefault();
+                setActiveMonth(row.dataset.month);
+            }
+        }
+    });
+
     const expenseList = document.getElementById('expenseList');
     expenseList.addEventListener('click', (e) => {
         const editBtn = e.target.closest('.btn-edit');
@@ -419,12 +526,11 @@ function initEventListeners() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    activeMonth = getCurrentMonth();
     loadExpenses();
     loadCategories();
     populateCategorySelects();
     setDefaultDate();
-    renderList();
-    renderSummary();
-    renderCategoryStats();
     initEventListeners();
+    refreshViews();
 });
