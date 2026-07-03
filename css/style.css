@@ -518,7 +518,23 @@ body {
     margin-bottom: var(--spacing-xl);
     display: flex;
     align-items: center;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
     gap: var(--spacing-md);
+}
+
+.filter-search {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-search input {
+    flex: 1;
 }
 
 .filter-section label {
@@ -527,9 +543,8 @@ body {
     white-space: nowrap;
 }
 
-.filter-section select {
-    flex: 1;
-    max-width: 250px;
+.filter-section select,
+.filter-section input {
     padding: var(--spacing-sm) var(--spacing-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -537,10 +552,15 @@ body {
     font-size: 0.95rem;
     color: var(--color-text-primary);
     background-color: var(--color-surface);
+}
+
+.filter-section select {
+    max-width: 250px;
     cursor: pointer;
 }
 
-.filter-section select:focus {
+.filter-section select:focus,
+.filter-section input:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-light);
@@ -725,6 +745,12 @@ body {
     .filter-section {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .filter-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-xs);
     }
 
     .filter-section select {

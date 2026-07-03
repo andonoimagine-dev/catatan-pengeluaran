@@ -1,4 +1,4 @@
-const CACHE_NAME = 'catatan-pengeluaran-v1';
+const CACHE_NAME = 'catatan-pengeluaran-v2';
 const APP_SHELL = [
     './',
     'index.html',

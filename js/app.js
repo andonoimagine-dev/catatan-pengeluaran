@@ -230,7 +230,7 @@ function setActiveMonth(yearMonth) {
 
 function refreshViews() {
     renderMonthNav();
-    renderList(document.getElementById('filterCategory').value);
+    renderList(document.getElementById('filterCategory').value, document.getElementById('searchInput').value);
     renderSummary();
     renderCategoryStats();
     renderTrend();
@@ -459,7 +459,7 @@ function renderBudgetList() {
     `).join('');
 }
 
-function renderList(filterCategory = '') {
+function renderList(filterCategory = '', searchQuery = '') {
     const listContainer = document.getElementById('expenseList');
     let filteredExpenses = expenses.filter(e => getYearMonth(e.date) === activeMonth);
 
@@ -467,8 +467,17 @@ function renderList(filterCategory = '') {
         filteredExpenses = filteredExpenses.filter(e => e.category === filterCategory);
     }
 
+    const query = searchQuery.trim().toLowerCase();
+    if (query) {
+        filteredExpenses = filteredExpenses.filter(e =>
+            e.note.toLowerCase().includes(query) || e.category.toLowerCase().includes(query)
+        );
+    }
+
     if (filteredExpenses.length === 0) {
-        listContainer.innerHTML = `<p class="empty-message">Belum ada catatan pengeluaran di ${formatMonth(activeMonth)}</p>`;
+        listContainer.innerHTML = query
+            ? '<p class="empty-message">Tidak ada catatan yang cocok dengan pencarian</p>'
+            : `<p class="empty-message">Belum ada catatan pengeluaran di ${formatMonth(activeMonth)}</p>`;
         return;
     }
 
@@ -801,9 +810,10 @@ function initEventListeners() {
     document.getElementById('importCancelBtn').addEventListener('click', cancelImport);
 
     const filterSelect = document.getElementById('filterCategory');
-    filterSelect.addEventListener('change', (e) => {
-        renderList(e.target.value);
-    });
+    const searchInput = document.getElementById('searchInput');
+    const applyListFilters = () => renderList(filterSelect.value, searchInput.value);
+    filterSelect.addEventListener('change', applyListFilters);
+    searchInput.addEventListener('input', applyListFilters);
 
     document.getElementById('prevMonthBtn').addEventListener('click', () => {
         setActiveMonth(shiftMonth(activeMonth, -1));
