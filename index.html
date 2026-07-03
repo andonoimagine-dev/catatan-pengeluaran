@@ -44,8 +44,18 @@
                     <label for="inputNote">Catatan (Opsional)</label>
                     <input type="text" id="inputNote" placeholder="Deskripsi pengeluaran...">
                 </div>
-                <button type="submit" class="btn-primary">Tambah Pengeluaran</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary" id="submitBtn">Tambah Pengeluaran</button>
+                    <button type="button" class="btn-secondary hidden" id="cancelEditBtn">Batal</button>
+                </div>
             </form>
+        </section>
+
+        <section class="stats-section">
+            <h2>Rincian per Kategori (Bulan Ini)</h2>
+            <div id="categoryStats" class="category-stats">
+                <p class="empty-message">Belum ada pengeluaran bulan ini</p>
+            </div>
         </section>
 
         <section class="filter-section">
