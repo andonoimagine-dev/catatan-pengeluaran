@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catatan Pengeluaran</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Catatan Pengeluaran</h1>
+            <p class="subtitle">Catat pengeluaran harian dengan mudah</p>
+        </header>
+
+        <section class="summary">
+            <div class="summary-card">
+                <div class="summary-label">Total Hari Ini</div>
+                <div class="summary-amount" id="todayTotal">Rp 0</div>
+            </div>
+            <div class="summary-card accent">
+                <div class="summary-label">Total Bulan Ini</div>
+                <div class="summary-amount" id="monthTotal">Rp 0</div>
+            </div>
+        </section>
+
+        <section class="input-section">
+            <form id="expenseForm" class="expense-form">
+                <div class="form-group">
+                    <label for="inputDate">Tanggal</label>
+                    <input type="date" id="inputDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="inputCategory">Kategori</label>
+                    <select id="inputCategory" required>
+                        <option value="">Pilih Kategori</option>
+                        <option value="Makanan & Minuman">Makanan & Minuman</option>
+                        <option value="Transportasi">Transportasi</option>
+                        <option value="Belanja">Belanja</option>
+                        <option value="Tagihan">Tagihan</option>
+                        <option value="Hiburan">Hiburan</option>
+                        <option value="Kesehatan">Kesehatan</option>
+                        <option value="Pendidikan">Pendidikan</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="inputAmount">Jumlah (Rp)</label>
+                    <input type="number" id="inputAmount" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="inputNote">Catatan (Opsional)</label>
+                    <input type="text" id="inputNote" placeholder="Deskripsi pengeluaran...">
+                </div>
+                <button type="submit" class="btn-primary">Tambah Pengeluaran</button>
+            </form>
+        </section>
+
+        <section class="filter-section">
+            <label for="filterCategory">Filter Kategori:</label>
+            <select id="filterCategory">
+                <option value="">Semua Kategori</option>
+                <option value="Makanan & Minuman">Makanan & Minuman</option>
+                <option value="Transportasi">Transportasi</option>
+                <option value="Belanja">Belanja</option>
+                <option value="Tagihan">Tagihan</option>
+                <option value="Hiburan">Hiburan</option>
+                <option value="Kesehatan">Kesehatan</option>
+                <option value="Pendidikan">Pendidikan</option>
+                <option value="Lainnya">Lainnya</option>
+            </select>
+        </section>
+
+        <section class="list-section">
+            <h2>Daftar Pengeluaran</h2>
+            <div id="expenseList" class="expense-list">
+                <p class="empty-message">Belum ada catatan pengeluaran</p>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
