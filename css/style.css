@@ -648,6 +648,50 @@ body {
 .badge-7 { background-color: var(--color-category-7); }
 .badge-8 { background-color: var(--color-category-8); }
 
+/* Data Panel */
+.data-panel {
+    background-color: var(--color-surface);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.data-note {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+}
+
+.data-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.import-confirm {
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    background-color: #FBF4EA;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    font-size: 0.9rem;
+}
+
+.data-message {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-primary-dark);
+}
+
+.data-message.error {
+    color: var(--color-danger);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {

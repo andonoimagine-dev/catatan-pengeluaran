@@ -501,6 +501,178 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/* ===== Backup & Export ===== */
+
+let pendingImport = null;
+
+function buildExportJson() {
+    return JSON.stringify({
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        expenses: expenses,
+        customCategories: customCategories,
+        budgets: budgets
+    }, null, 2);
+}
+
+function escapeCsvField(value) {
+    const text = String(value);
+    if (/[",\n\r]/.test(text)) {
+        return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+}
+
+function buildExportCsv() {
+    const header = 'tanggal,kategori,jumlah,catatan';
+    const rows = expenses.map(e =>
+        [e.date, e.category, e.amount, e.note || ''].map(escapeCsvField).join(',')
+    );
+    return '\uFEFF' + [header, ...rows].join('\r\n');
+}
+
+function downloadFile(filename, content, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+function showDataMessage(text, isError = false) {
+    const el = document.getElementById('dataMessage');
+    el.textContent = text;
+    el.classList.toggle('error', isError);
+    el.classList.remove('hidden');
+}
+
+function validateImportData(data) {
+    if (!data || typeof data !== 'object' || !Array.isArray(data.expenses)) {
+        return null;
+    }
+
+    const validExpenses = [];
+    for (const item of data.expenses) {
+        if (!item || typeof item !== 'object') return null;
+        if (typeof item.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(item.date)) return null;
+        if (typeof item.category !== 'string' || !item.category) return null;
+        if (typeof item.amount !== 'number' || !isFinite(item.amount) || item.amount <= 0) return null;
+
+        validExpenses.push({
+            id: typeof item.id === 'number' ? item.id : Date.now() + Math.floor(Math.random() * 1000000),
+            date: item.date,
+            category: item.category,
+            amount: item.amount,
+            note: typeof item.note === 'string' ? item.note : ''
+        });
+    }
+
+    const validCategories = Array.isArray(data.customCategories)
+        ? data.customCategories.filter(c => typeof c === 'string' && c.trim())
+        : [];
+
+    const validBudgets = { total: null, categories: {} };
+    if (data.budgets && typeof data.budgets === 'object') {
+        if (typeof data.budgets.total === 'number' && data.budgets.total > 0) {
+            validBudgets.total = data.budgets.total;
+        }
+        if (data.budgets.categories && typeof data.budgets.categories === 'object') {
+            Object.entries(data.budgets.categories).forEach(([cat, amt]) => {
+                if (typeof amt === 'number' && amt > 0) {
+                    validBudgets.categories[cat] = amt;
+                }
+            });
+        }
+    }
+
+    return { expenses: validExpenses, customCategories: validCategories, budgets: validBudgets };
+}
+
+function applyImport(mode) {
+    if (!pendingImport) {
+        return;
+    }
+
+    if (mode === 'replace') {
+        expenses = pendingImport.expenses;
+        customCategories = pendingImport.customCategories;
+        budgets = pendingImport.budgets;
+    } else {
+        const existingIds = new Set(expenses.map(e => e.id));
+        const newExpenses = pendingImport.expenses.filter(e => !existingIds.has(e.id));
+        expenses = expenses.concat(newExpenses);
+
+        pendingImport.customCategories.forEach(c => {
+            if (!getAllCategories().includes(c)) {
+                customCategories.push(c);
+            }
+        });
+
+        if (budgets.total === null) {
+            budgets.total = pendingImport.budgets.total;
+        }
+        Object.entries(pendingImport.budgets.categories).forEach(([cat, amt]) => {
+            if (!(cat in budgets.categories)) {
+                budgets.categories[cat] = amt;
+            }
+        });
+    }
+
+    expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+    saveExpenses();
+    saveCategories();
+    saveBudgets();
+
+    const count = pendingImport.expenses.length;
+    cancelImport();
+    populateCategorySelects();
+    refreshViews();
+    showDataMessage(`Import berhasil: ${count} transaksi diproses.`);
+}
+
+function cancelImport() {
+    pendingImport = null;
+    document.getElementById('importConfirm').classList.add('hidden');
+    document.getElementById('importFileInput').value = '';
+}
+
+function handleImportFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+        let parsed;
+        try {
+            parsed = JSON.parse(reader.result);
+        } catch (e) {
+            showDataMessage('File bukan JSON yang valid.', true);
+            cancelImport();
+            return;
+        }
+
+        const validated = validateImportData(parsed);
+        if (!validated) {
+            showDataMessage('Struktur file tidak dikenali. Gunakan file hasil Export JSON dari aplikasi ini.', true);
+            cancelImport();
+            return;
+        }
+
+        pendingImport = validated;
+        const budgetCount = (validated.budgets.total !== null ? 1 : 0)
+            + Object.keys(validated.budgets.categories).length;
+        document.getElementById('importSummary').textContent =
+            `File berisi ${validated.expenses.length} transaksi, ${validated.customCategories.length} kategori kustom, dan ${budgetCount} anggaran. ` +
+            'Gabungkan dengan data sekarang, atau ganti semua data?';
+        document.getElementById('importConfirm').classList.remove('hidden');
+        document.getElementById('dataMessage').classList.add('hidden');
+    };
+    reader.onerror = () => {
+        showDataMessage('Gagal membaca file.', true);
+        cancelImport();
+    };
+    reader.readAsText(file);
+}
+
 function setDefaultDate() {
     const dateInput = document.getElementById('inputDate');
     dateInput.valueAsDate = new Date();
@@ -603,6 +775,30 @@ function initEventListeners() {
             deleteBudget(deleteBtn.dataset.budgetTarget);
         }
     });
+
+    document.getElementById('exportJsonBtn').addEventListener('click', () => {
+        downloadFile(`catatan-pengeluaran-${getTodayString()}.json`, buildExportJson(), 'application/json');
+        showDataMessage('Backup JSON diunduh.');
+    });
+
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+        downloadFile(`catatan-pengeluaran-${getTodayString()}.csv`, buildExportCsv(), 'text/csv;charset=utf-8');
+        showDataMessage('File CSV diunduh.');
+    });
+
+    document.getElementById('importJsonBtn').addEventListener('click', () => {
+        document.getElementById('importFileInput').click();
+    });
+
+    document.getElementById('importFileInput').addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleImportFile(e.target.files[0]);
+        }
+    });
+
+    document.getElementById('importMergeBtn').addEventListener('click', () => applyImport('merge'));
+    document.getElementById('importReplaceBtn').addEventListener('click', () => applyImport('replace'));
+    document.getElementById('importCancelBtn').addEventListener('click', cancelImport);
 
     const filterSelect = document.getElementById('filterCategory');
     filterSelect.addEventListener('change', (e) => {

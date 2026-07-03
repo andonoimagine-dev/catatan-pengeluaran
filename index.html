@@ -110,6 +110,28 @@
                 <p class="empty-message">Belum ada catatan pengeluaran</p>
             </div>
         </section>
+
+        <section class="stats-section">
+            <h2>Data &amp; Backup</h2>
+            <div class="data-panel">
+                <p class="data-note">Data tersimpan di browser ini saja. Lakukan backup berkala agar data tidak hilang saat data browser dibersihkan.</p>
+                <div class="data-actions">
+                    <button type="button" id="exportJsonBtn" class="btn-primary">Export JSON (Backup)</button>
+                    <button type="button" id="exportCsvBtn" class="btn-secondary">Export CSV</button>
+                    <button type="button" id="importJsonBtn" class="btn-secondary">Import JSON</button>
+                    <input type="file" id="importFileInput" accept=".json,application/json" class="hidden">
+                </div>
+                <div id="importConfirm" class="import-confirm hidden">
+                    <p id="importSummary"></p>
+                    <div class="data-actions">
+                        <button type="button" id="importMergeBtn" class="btn-primary">Gabungkan</button>
+                        <button type="button" id="importReplaceBtn" class="btn-danger">Ganti Semua</button>
+                        <button type="button" id="importCancelBtn" class="btn-secondary">Batal</button>
+                    </div>
+                </div>
+                <p id="dataMessage" class="data-message hidden"></p>
+            </div>
+        </section>
     </div>
 
     <script src="js/app.js"></script>
