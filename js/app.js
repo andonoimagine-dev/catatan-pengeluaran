@@ -1,5 +1,7 @@
 const STORAGE_KEY = 'catatan-pengeluaran-data';
 const CATEGORY_STORAGE_KEY = 'catatan-pengeluaran-categories';
+const BUDGET_STORAGE_KEY = 'catatan-pengeluaran-budgets';
+const BUDGET_TOTAL_VALUE = '__total__';
 const ADD_CATEGORY_VALUE = '__add_new__';
 const DELETE_CATEGORY_VALUE = '__delete_category__';
 
@@ -29,6 +31,7 @@ let expenses = [];
 let customCategories = [];
 let editingId = null;
 let activeMonth = null;
+let budgets = { total: null, categories: {} };
 
 function loadExpenses() {
     try {
@@ -72,6 +75,51 @@ function getAllCategories() {
     return [...DEFAULT_CATEGORIES, ...customCategories];
 }
 
+function loadBudgets() {
+    try {
+        const data = localStorage.getItem(BUDGET_STORAGE_KEY);
+        const parsed = data ? JSON.parse(data) : null;
+        budgets = {
+            total: parsed && typeof parsed.total === 'number' ? parsed.total : null,
+            categories: parsed && typeof parsed.categories === 'object' && parsed.categories !== null
+                ? parsed.categories
+                : {}
+        };
+    } catch (e) {
+        console.error('Error loading budgets:', e);
+        budgets = { total: null, categories: {} };
+    }
+}
+
+function saveBudgets() {
+    try {
+        localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify(budgets));
+    } catch (e) {
+        console.error('Error saving budgets:', e);
+        alert('Gagal menyimpan anggaran. Storage mungkin penuh.');
+    }
+}
+
+function setBudget(target, amount) {
+    if (target === BUDGET_TOTAL_VALUE) {
+        budgets.total = amount;
+    } else {
+        budgets.categories[target] = amount;
+    }
+    saveBudgets();
+    refreshViews();
+}
+
+function deleteBudget(target) {
+    if (target === BUDGET_TOTAL_VALUE) {
+        budgets.total = null;
+    } else {
+        delete budgets.categories[target];
+    }
+    saveBudgets();
+    refreshViews();
+}
+
 function getCategoryBadgeNumber(category) {
     if (categoryColors[category]) {
         return categoryColors[category];
@@ -101,6 +149,13 @@ function populateCategorySelects(selectedInputValue = '') {
     filterSelect.innerHTML = '<option value="">Semua Kategori</option>' + optionsHtml;
     if (categories.includes(previousFilterValue)) {
         filterSelect.value = previousFilterValue;
+    }
+
+    const budgetSelect = document.getElementById('budgetTarget');
+    const previousBudgetValue = budgetSelect.value;
+    budgetSelect.innerHTML = `<option value="${BUDGET_TOTAL_VALUE}">Total Bulanan</option>` + optionsHtml;
+    if (categories.includes(previousBudgetValue)) {
+        budgetSelect.value = previousBudgetValue;
     }
 }
 
@@ -179,6 +234,7 @@ function refreshViews() {
     renderSummary();
     renderCategoryStats();
     renderTrend();
+    renderBudgetList();
 }
 
 function renderMonthNav() {
@@ -262,6 +318,19 @@ function renderSummary() {
     document.getElementById('monthTotalLabel').textContent = isCurrentMonth
         ? 'Total Bulan Ini'
         : `Total ${formatMonth(activeMonth)}`;
+
+    const budgetCard = document.getElementById('budgetCard');
+    if (budgets.total !== null) {
+        const remaining = budgets.total - monthTotal;
+        const remainingEl = document.getElementById('budgetRemaining');
+        remainingEl.textContent = formatCurrency(remaining);
+        remainingEl.classList.toggle('negative', remaining < 0);
+        remainingEl.classList.toggle('warning', remaining >= 0 && monthTotal >= budgets.total * 0.8);
+        document.getElementById('budgetNote').textContent = `dari ${formatCurrency(budgets.total)}`;
+        budgetCard.classList.remove('hidden');
+    } else {
+        budgetCard.classList.add('hidden');
+    }
 }
 
 function renderTrend() {
@@ -307,37 +376,87 @@ function renderCategoryStats() {
 
     const monthExpenses = expenses.filter(e => getYearMonth(e.date) === activeMonth);
 
-    if (monthExpenses.length === 0) {
-        container.innerHTML = '<p class="empty-message">Belum ada pengeluaran bulan ini</p>';
-        return;
-    }
-
     const totals = {};
     monthExpenses.forEach(e => {
         totals[e.category] = (totals[e.category] || 0) + e.amount;
     });
+    Object.keys(budgets.categories).forEach(category => {
+        if (!(category in totals)) {
+            totals[category] = 0;
+        }
+    });
 
     const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0) {
+        container.innerHTML = '<p class="empty-message">Belum ada pengeluaran bulan ini</p>';
+        return;
+    }
+
     const grandTotal = sorted.reduce((sum, [, amount]) => sum + amount, 0);
     const maxAmount = sorted[0][1];
 
     container.innerHTML = sorted.map(([category, amount]) => {
-        const percent = grandTotal > 0 ? (amount / grandTotal) * 100 : 0;
-        const barWidth = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
-        const percentLabel = percent < 1 ? '<1%' : `${Math.round(percent)}%`;
+        const budget = budgets.categories[category];
+        let barWidth, barClass = '', valueHtml, noteHtml = '';
+
+        if (typeof budget === 'number') {
+            const ratio = amount / budget;
+            barWidth = Math.min(ratio * 100, 100);
+            valueHtml = `${formatCurrency(amount)} <span class="stat-percent">dari ${formatCurrency(budget)}</span>`;
+            if (ratio > 1) {
+                barClass = ' over';
+                noteHtml = `<div class="stat-budget-note over">Lewat ${formatCurrency(amount - budget)}</div>`;
+            } else {
+                if (ratio >= 0.8) {
+                    barClass = ' warn';
+                }
+                noteHtml = `<div class="stat-budget-note">Sisa ${formatCurrency(budget - amount)}</div>`;
+            }
+        } else {
+            const percent = grandTotal > 0 ? (amount / grandTotal) * 100 : 0;
+            const percentLabel = percent < 1 ? '<1%' : `${Math.round(percent)}%`;
+            barWidth = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
+            valueHtml = `${formatCurrency(amount)} <span class="stat-percent">(${percentLabel})</span>`;
+        }
 
         return `
             <div class="stat-row">
                 <div class="stat-row-header">
                     <span class="stat-category">${escapeHtml(category)}</span>
-                    <span class="stat-value">${formatCurrency(amount)} <span class="stat-percent">(${percentLabel})</span></span>
+                    <span class="stat-value">${valueHtml}</span>
                 </div>
                 <div class="stat-bar-track">
-                    <div class="stat-bar-fill" style="width: ${barWidth}%"></div>
+                    <div class="stat-bar-fill${barClass}" style="width: ${barWidth}%"></div>
                 </div>
+                ${noteHtml}
             </div>
         `;
     }).join('');
+}
+
+function renderBudgetList() {
+    const container = document.getElementById('budgetList');
+    const items = [];
+
+    if (budgets.total !== null) {
+        items.push({ target: BUDGET_TOTAL_VALUE, label: 'Total Bulanan', amount: budgets.total });
+    }
+    Object.entries(budgets.categories).forEach(([category, amount]) => {
+        items.push({ target: category, label: category, amount: amount });
+    });
+
+    if (items.length === 0) {
+        container.innerHTML = '<p class="empty-message">Belum ada anggaran. Atur batas belanja agar pengeluaran lebih terkontrol.</p>';
+        return;
+    }
+
+    container.innerHTML = items.map(item => `
+        <div class="budget-item">
+            <span class="budget-item-label">${escapeHtml(item.label)}</span>
+            <span class="budget-item-amount">${formatCurrency(item.amount)}</span>
+            <button class="btn-danger" data-budget-target="${escapeHtml(item.target)}">Hapus</button>
+        </div>
+    `).join('');
 }
 
 function renderList(filterCategory = '') {
@@ -464,6 +583,27 @@ function initEventListeners() {
 
     document.getElementById('cancelEditBtn').addEventListener('click', exitEditMode);
 
+    document.getElementById('budgetForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const target = document.getElementById('budgetTarget').value;
+        const amount = parseFloat(document.getElementById('budgetAmount').value);
+
+        if (!target || isNaN(amount) || amount <= 0) {
+            alert('Harap isi batas anggaran yang valid');
+            return;
+        }
+
+        setBudget(target, amount);
+        document.getElementById('budgetAmount').value = '';
+    });
+
+    document.getElementById('budgetList').addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('[data-budget-target]');
+        if (deleteBtn) {
+            deleteBudget(deleteBtn.dataset.budgetTarget);
+        }
+    });
+
     const filterSelect = document.getElementById('filterCategory');
     filterSelect.addEventListener('change', (e) => {
         renderList(e.target.value);
@@ -529,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     activeMonth = getCurrentMonth();
     loadExpenses();
     loadCategories();
+    loadBudgets();
     populateCategorySelects();
     setDefaultDate();
     initEventListeners();

@@ -31,6 +31,11 @@
                 <div class="summary-label" id="monthTotalLabel">Total Bulan Ini</div>
                 <div class="summary-amount" id="monthTotal">Rp 0</div>
             </div>
+            <div class="summary-card hidden" id="budgetCard">
+                <div class="summary-label">Sisa Anggaran</div>
+                <div class="summary-amount" id="budgetRemaining">Rp 0</div>
+                <div class="summary-note" id="budgetNote"></div>
+            </div>
         </section>
 
         <section class="input-section">
@@ -70,6 +75,26 @@
         <section class="stats-section">
             <h2>Tren 6 Bulan Terakhir</h2>
             <div id="trendChart" class="category-stats"></div>
+        </section>
+
+        <section class="stats-section">
+            <h2>Kelola Anggaran Bulanan</h2>
+            <div class="budget-panel">
+                <form id="budgetForm" class="budget-form">
+                    <div class="form-group">
+                        <label for="budgetTarget">Anggaran Untuk</label>
+                        <select id="budgetTarget" required>
+                            <option value="__total__">Total Bulanan</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="budgetAmount">Batas (Rp)</label>
+                        <input type="number" id="budgetAmount" min="1" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Simpan Anggaran</button>
+                </form>
+                <div id="budgetList" class="budget-list"></div>
+            </div>
         </section>
 
         <section class="filter-section">
